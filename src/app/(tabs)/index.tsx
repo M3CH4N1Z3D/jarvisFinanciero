@@ -110,11 +110,11 @@ export default function ChatScreen() {
         <View 
           className={`max-w-[80%] p-3 rounded-2xl ${
             isUser 
-              ? 'bg-blue-500 rounded-tr-sm' 
-              : 'bg-gray-200 rounded-tl-sm'
+              ? 'bg-blue-500 dark:bg-blue-600 rounded-tr-sm' 
+              : 'bg-gray-200 dark:bg-gray-700 rounded-tl-sm'
           }`}
         >
-          <Text className={`${isUser ? 'text-white' : 'text-gray-800'} text-base`}>
+          <Text className={`${isUser ? 'text-white' : 'text-gray-800 dark:text-white'} text-base`}>
             {item.text}
           </Text>
         </View>
@@ -124,9 +124,10 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-gray-50" 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      style={{ flex: 1 }}
+      className="bg-gray-50 dark:bg-gray-900" 
+      behavior="padding"
+      keyboardVerticalOffset={140}
     >
       <FlatList
         ref={flatListRef}
@@ -141,14 +142,15 @@ export default function ChatScreen() {
       {isTyping && (
         <View className="px-4 py-2 flex-row items-center">
           <ActivityIndicator size="small" color="#3b82f6" />
-          <Text className="ml-2 text-gray-500 text-sm">Sami está procesando...</Text>
+          <Text className="ml-2 text-gray-500 dark:text-gray-400 text-sm">Sami está procesando...</Text>
         </View>
       )}
 
-      <View className="flex-row items-center p-3 bg-white border-t border-gray-200">
+      <View className="flex-row items-center p-3 pb-6 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <TextInput
-          className="flex-1 bg-gray-100 px-4 py-2.5 rounded-full text-base mr-2"
+          className="flex-1 bg-gray-100 dark:bg-gray-700 px-4 py-2.5 rounded-full text-base dark:text-white mr-2"
           placeholder="Ej: Gasté $15000 en almuerzo"
+          placeholderTextColor="#9ca3af"
           value={inputText}
           onChangeText={setInputText}
           onSubmitEditing={sendMessage}
@@ -158,7 +160,7 @@ export default function ChatScreen() {
           onPress={sendMessage}
           disabled={!inputText.trim() || isTyping}
           className={`w-11 h-11 rounded-full items-center justify-center ${
-            !inputText.trim() || isTyping ? 'bg-gray-300' : 'bg-blue-500'
+            !inputText.trim() || isTyping ? 'bg-gray-300 dark:bg-gray-600' : 'bg-blue-500 dark:bg-blue-600'
           }`}
         >
           <Ionicons name="send" size={20} color="white" style={{ marginLeft: 2 }} />

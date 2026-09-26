@@ -37,13 +37,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center items-center bg-white p-4">
-      <Text className="text-3xl font-bold mb-8 text-blue-600">FINTUAL</Text>
-      <Text className="text-lg mb-8 text-gray-600 text-center">
+    <View className="flex-1 justify-center items-center bg-white dark:bg-gray-900 p-4">
+      <Text className="text-3xl font-bold mb-8 text-blue-600 dark:text-blue-400">FINTUAL</Text>
+      <Text className="text-lg mb-8 text-gray-600 dark:text-gray-300 text-center">
         Inicia sesión para gestionar tus finanzas con la ayuda de IA.
       </Text>
       <TouchableOpacity 
-        className="bg-blue-500 py-3 px-6 rounded-full w-full max-w-sm flex-row justify-center items-center"
+        className="bg-blue-500 dark:bg-blue-600 py-3 px-6 rounded-full w-full max-w-sm flex-row justify-center items-center"
         onPress={signInWithGoogle}
       >
         <Text className="text-white font-bold text-lg">Iniciar sesión con Google</Text>
