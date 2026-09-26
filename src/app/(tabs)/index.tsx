@@ -2,18 +2,18 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { parsearMensajeFinanciero } from '../../services/geminiService';
-import { insertTransaction } from '../../services/transactionService';
+import { insertTransaction, createAccount, getUserAccounts, updateTransaction, deleteTransaction, getTransactionsCurrentMonth } from '../../services/transactionService';
 
 interface Message {
   id: string;
   text: string;
-  sender: 'user' | 'jarvis';
+  sender: 'user' | 'sami';
   status?: 'sending' | 'success' | 'error';
 }
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: '¡Hola! Soy Jarvis. Dime, ¿qué gasto o ingreso quieres registrar hoy?', sender: 'jarvis' }
+    { id: '1', text: '¡Hola! Soy Sami. Dime, ¿qué gasto o ingreso quieres registrar hoy? También puedo crear cuentas para ti.', sender: 'sami' }
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -33,30 +33,58 @@ export default function ChatScreen() {
     setIsTyping(true);
 
     try {
-      // 1. Llamar a Gemini
-      const jsonResponse = await parsearMensajeFinanciero(userMessage.text);
+      // 1. Obtener cuentas del usuario para el contexto
+      const accounts = await getUserAccounts();
+      const cuentasContexto = accounts?.map(acc => `- ${acc.name} (Saldo: $${acc.balance}, Reglas: ${acc.rules || 'Ninguna'})`).join('\n') || 'No hay cuentas configuradas.';
+
+      // Obtener transacciones recientes para el contexto
+      const recentTransactions = await getTransactionsCurrentMonth();
+      const transaccionesContexto = recentTransactions?.slice(0, 20).map(t => `- ${t.fecha}: ${t.concepto} -> ${t.categoria} (${t.tipo})`).join('\n') || 'No hay transacciones recientes.';
+
+      // 2. Llamar a Gemini
+      const historialGemini = [...messages, userMessage].map(msg => ({
+        role: msg.sender === 'sami' ? 'assistant' as const : 'user' as const,
+        content: msg.text
+      }));
+      const jsonResponse = await parsearMensajeFinanciero(historialGemini, cuentasContexto, transaccionesContexto);
       
-      // 2. Parsear JSON
+      // 3. Parsear JSON
       const data = JSON.parse(jsonResponse);
       
-      if (data.accion !== 'registrar') {
+      let samiResponseText = '';
+
+      if (data.accion === 'preguntar') {
+        samiResponseText = data.mensaje;
+      } else if (data.accion === 'configurar_cuenta') {
+        await createAccount(data.nombre, data.saldo_inicial, data.reglas);
+        samiResponseText = `Cuenta configurada: ${data.nombre} con saldo inicial de $${data.saldo_inicial}.`;
+      } else if (data.accion === 'registrar_transaccion') {
+        await insertTransaction({
+          fecha: data.fecha || new Date().toISOString().split('T')[0],
+          concepto: data.concepto,
+          categoria: data.categoria,
+          monto: data.monto,
+          tipo: data.tipo,
+          cuenta_nombre: data.cuenta_nombre,
+          tax_amount: data.impuesto || 0
+        });
+
+        samiResponseText = `¡Listo! Registré tu ${data.tipo.toLowerCase()} de $${data.monto} en ${data.categoria} (${data.concepto}).${data.impuesto ? ` Impuesto aplicado: $${data.impuesto}.` : ''}`;
+      } else if (data.accion === 'actualizar_transaccion') {
+        await updateTransaction(data.concepto_busqueda, data.nuevos_datos);
+        samiResponseText = `¡Listo! Actualicé la transacción relacionada con "${data.concepto_busqueda}".`;
+      } else if (data.accion === 'eliminar_transaccion') {
+        const conceptoEliminado = await deleteTransaction(data.concepto_busqueda);
+        samiResponseText = `¡Listo! Eliminé la transacción "${conceptoEliminado}".`;
+      } else {
         throw new Error('No entendí la acción a realizar.');
       }
 
-      // 3. Insertar en Supabase
-      await insertTransaction({
-        fecha: data.fecha,
-        concepto: data.concepto,
-        categoria: data.categoria,
-        monto: data.monto,
-        tipo: data.tipo,
-      });
-
-      // 4. Mensaje de éxito
+      // 4. Mensaje de éxito o respuesta
       const successMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: `¡Listo! Registré tu ${data.tipo.toLowerCase()} de $${data.monto} en ${data.categoria} (${data.concepto}).`,
-        sender: 'jarvis',
+        text: samiResponseText,
+        sender: 'sami',
       };
       
       setMessages(prev => [...prev, successMessage]);
@@ -65,7 +93,7 @@ export default function ChatScreen() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: `Hubo un error: ${error.message || 'No pude procesar tu solicitud.'}`,
-        sender: 'jarvis',
+        sender: 'sami',
         status: 'error'
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -113,7 +141,7 @@ export default function ChatScreen() {
       {isTyping && (
         <View className="px-4 py-2 flex-row items-center">
           <ActivityIndicator size="small" color="#3b82f6" />
-          <Text className="ml-2 text-gray-500 text-sm">Jarvis está procesando...</Text>
+          <Text className="ml-2 text-gray-500 text-sm">Sami está procesando...</Text>
         </View>
       )}
 

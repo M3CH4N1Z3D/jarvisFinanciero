@@ -1,27 +1,35 @@
 import { View, Text, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
-import { useEffect, useState } from 'react';
-import { getTransactionsCurrentMonth } from '../../services/transactionService';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { getTransactionsCurrentMonth, getUserAccounts } from '../../services/transactionService';
 import { PieChart, LineChart } from 'react-native-chart-kit';
 
 export default function DashboardScreen() {
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getTransactionsCurrentMonth();
-      setTransactions(data || []);
+      const [transactionsData, accountsData] = await Promise.all([
+        getTransactionsCurrentMonth(),
+        getUserAccounts()
+      ]);
+      setTransactions(transactionsData || []);
+      setAccounts(accountsData || []);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   if (loading) {
     return (
@@ -119,6 +127,25 @@ export default function DashboardScreen() {
             ${balance.toLocaleString()}
           </Text>
         </View>
+      </View>
+
+      {/* Mis Cuentas */}
+      <View className="mb-6">
+        <Text className="text-xl font-bold mb-4 text-gray-800">Mis Cuentas</Text>
+        {accounts.length > 0 ? (
+          <View className="flex-row flex-wrap justify-between">
+            {accounts.map((account) => (
+              <View key={account.id} className="bg-white p-4 rounded-2xl shadow-sm mb-3 border border-gray-100 w-[48%]">
+                <Text className="text-gray-500 text-xs mb-1 font-medium truncate" numberOfLines={1}>{account.name}</Text>
+                <Text className="text-gray-800 font-bold text-lg">${(account.balance || 0).toLocaleString()}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <Text className="text-gray-500 text-center">No hay cuentas configuradas aún.</Text>
+          </View>
+        )}
       </View>
 
       {/* Gráfico Circular - Gastos por Categoría */}

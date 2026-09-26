@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "agenteFinanciero",
+    "name": "FINTUAL",
     "slug": "agenteFinanciero",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tuempresa.jarvis"
     },
     "android": {
       "package": "com.tuempresa.jarvis",
@@ -29,7 +30,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar"
-    ]
+      "expo-status-bar",
+      "@react-native-google-signin/google-signin"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4d8aed4c-ccb7-4be6-80e2-4a9de54e6eb5"
+      }
+    }
   }
 }
