@@ -49,35 +49,39 @@ export default function ChatScreen() {
       const jsonResponse = await parsearMensajeFinanciero(historialGemini, cuentasContexto, transaccionesContexto);
       
       // 3. Parsear JSON
-      const data = JSON.parse(jsonResponse);
+      const cleanText = jsonResponse.replace(/```json\n?|```/g, '').trim();
+      const data = JSON.parse(cleanText);
       
       let samiResponseText = '';
+      const acciones = data.acciones || [data]; // Fallback por si no devuelve el arreglo
 
-      if (data.accion === 'preguntar') {
-        samiResponseText = data.mensaje;
-      } else if (data.accion === 'configurar_cuenta') {
-        await createAccount(data.nombre, data.saldo_inicial, data.reglas);
-        samiResponseText = `Cuenta configurada: ${data.nombre} con saldo inicial de $${data.saldo_inicial}.`;
-      } else if (data.accion === 'registrar_transaccion') {
-        await insertTransaction({
-          fecha: data.fecha || new Date().toISOString().split('T')[0],
-          concepto: data.concepto,
-          categoria: data.categoria,
-          monto: data.monto,
-          tipo: data.tipo,
-          cuenta_nombre: data.cuenta_nombre,
-          tax_amount: data.impuesto || 0
-        });
+      for (const accionData of acciones) {
+        if (accionData.accion === 'preguntar') {
+          samiResponseText += (samiResponseText ? '\n' : '') + accionData.mensaje;
+        } else if (accionData.accion === 'configurar_cuenta') {
+          await createAccount(accionData.nombre, accionData.saldo_inicial, accionData.reglas);
+          samiResponseText += (samiResponseText ? '\n' : '') + `Cuenta configurada: ${accionData.nombre} con saldo inicial de $${accionData.saldo_inicial}.`;
+        } else if (accionData.accion === 'registrar_transaccion') {
+          await insertTransaction({
+            fecha: accionData.fecha || new Date().toISOString().split('T')[0],
+            concepto: accionData.concepto,
+            categoria: accionData.categoria,
+            monto: accionData.monto,
+            tipo: accionData.tipo,
+            cuenta_nombre: accionData.cuenta_nombre,
+            tax_amount: accionData.impuesto || 0
+          });
 
-        samiResponseText = `¡Listo! Registré tu ${data.tipo.toLowerCase()} de $${data.monto} en ${data.categoria} (${data.concepto}).${data.impuesto ? ` Impuesto aplicado: $${data.impuesto}.` : ''}`;
-      } else if (data.accion === 'actualizar_transaccion') {
-        await updateTransaction(data.concepto_busqueda, data.nuevos_datos);
-        samiResponseText = `¡Listo! Actualicé la transacción relacionada con "${data.concepto_busqueda}".`;
-      } else if (data.accion === 'eliminar_transaccion') {
-        const conceptoEliminado = await deleteTransaction(data.concepto_busqueda);
-        samiResponseText = `¡Listo! Eliminé la transacción "${conceptoEliminado}".`;
-      } else {
-        throw new Error('No entendí la acción a realizar.');
+          samiResponseText += (samiResponseText ? '\n' : '') + `¡Listo! Registré tu ${accionData.tipo.toLowerCase()} de $${accionData.monto} en ${accionData.categoria} (${accionData.concepto}).${accionData.impuesto ? ` Impuesto aplicado: $${accionData.impuesto}.` : ''}`;
+        } else if (accionData.accion === 'actualizar_transaccion') {
+          await updateTransaction(accionData.concepto_busqueda, accionData.nuevos_datos);
+          samiResponseText += (samiResponseText ? '\n' : '') + `¡Listo! Actualicé la transacción relacionada con "${accionData.concepto_busqueda}".`;
+        } else if (accionData.accion === 'eliminar_transaccion') {
+          const conceptoEliminado = await deleteTransaction(accionData.concepto_busqueda);
+          samiResponseText += (samiResponseText ? '\n' : '') + `¡Listo! Eliminé la transacción "${conceptoEliminado}".`;
+        } else {
+          throw new Error(`No entendí la acción a realizar: ${accionData.accion}`);
+        }
       }
 
       // 4. Mensaje de éxito o respuesta

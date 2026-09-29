@@ -44,3 +44,6 @@ yarn-error.*
 # secrets
 client_secret_*.json
 eas.json
+
+#others
+/FINTUAL_APK
